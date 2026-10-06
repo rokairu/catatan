@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Catatan — catatan harian simpel</title>
+<style>
+  :root {
+    --bg: #faf8f4;
+    --card: #ffffff;
+    --ink: #2b2620;
+    --muted: #8a8178;
+    --line: #e8e2d8;
+    --accent: #b3541e;
+    --accent-soft: #f7e8da;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #171412;
+      --card: #211d1a;
+      --ink: #ece5d8;
+      --muted: #9a8f80;
+      --line: #35302a;
+      --accent: #e08a4c;
+      --accent-soft: #3a2c20;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Georgia, "Times New Roman", serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1rem 4rem;
+  }
+  header { text-align: center; margin-bottom: 1.5rem; }
+  header h1 { font-size: 2rem; letter-spacing: 0.02em; }
+  header h1 span { color: var(--accent); }
+  header p { color: var(--muted); font-size: 0.9rem; margin-top: 0.25rem; font-family: system-ui, sans-serif; }
+  main {
+    width: 100%;
+    max-width: 680px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 1.5rem;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.05);
+  }
+  .datebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    font-family: system-ui, sans-serif;
+  }
+  .datebar .datelabel { font-weight: 600; font-size: 1.05rem; }
+  .datebar .datelabel small { display: block; color: var(--muted); font-weight: 400; font-size: 0.8rem; }
+  .nav { display: flex; gap: 0.4rem; }
+  button {
+    font-family: system-ui, sans-serif;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    color: var(--ink);
+    border-radius: 8px;
+    padding: 0.45rem 0.8rem;
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+  button:hover { border-color: var(--accent); color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover { opacity: 0.9; color: #fff; }
+  textarea {
+    width: 100%;
+    min-height: 320px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 1rem;
+    font-family: Georgia, serif;
+    font-size: 1.05rem;
+    line-height: 1.7;
+    background: var(--bg);
+    color: var(--ink);
+    resize: vertical;
+  }
+  textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.75rem;
+    font-family: system-ui, sans-serif;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .tools {
+    margin-top: 1.5rem;
+    border-top: 1px dashed var(--line);
+    padding-top: 1.25rem;
+    font-family: system-ui, sans-serif;
+  }
+  .tools h2 { font-size: 0.95rem; margin-bottom: 0.6rem; }
+  .searchrow { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; }
+  .searchrow input {
+    flex: 1;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 0.9rem;
+  }
+  #hasil { list-style: none; max-height: 220px; overflow-y: auto; }
+  #hasil li {
+    padding: 0.55rem 0.7rem;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    margin-bottom: 0.4rem;
+    cursor: pointer;
+    font-size: 0.88rem;
+  }
+  #hasil li:hover { border-color: var(--accent); background: var(--accent-soft); }
+  #hasil li b { display: block; font-size: 0.8rem; color: var(--accent); }
+  #hasil li span { color: var(--muted); }
+  .row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; }
+  footer { margin-top: 2rem; color: var(--muted); font-size: 0.8rem; font-family: system-ui, sans-serif; text-align: center; }
+  .toast {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--ink);
+    color: var(--bg);
+    font-family: system-ui, sans-serif;
+    font-size: 0.85rem;
+    padding: 0.6rem 1.1rem;
+    border-radius: 999px;
+    opacity: 0;
+    transition: all 0.25s ease;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Catatan<span>.</span></h1>
+  <p>catatan harian simpel — tersimpan otomatis di browser kamu</p>
+</header>
+
+<main>
+  <div class="datebar">
+    <div class="datelabel">
+      <span id="tgl"></span>
+      <small id="hari"></small>
+    </div>
+    <div class="nav">
+      <button id="prev" title="Hari sebelumnya">←</button>
+      <button id="today">Hari ini</button>
+      <button id="next" title="Hari berikutnya">→</button>
+    </div>
+  </div>
+
+  <textarea id="editor" placeholder="Tulis harimu di sini…"></textarea>
+
+  <div class="meta">
+    <span id="status">—</span>
+    <span id="kata">0 kata</span>
+  </div>
+
+  <div class="tools">
+    <h2>Cari catatan</h2>
+    <div class="searchrow">
+      <input id="cari" type="text" placeholder="Ketik kata kunci…">
+    </div>
+    <ul id="hasil"></ul>
+    <div class="row">
+      <button id="ekspor">⬇ Ekspor JSON</button>
+      <button id="impor">⬆ Impor JSON</button>
+      <input id="fileimpor" type="file" accept=".json" hidden>
+      <button id="hapus" title="Hapus catatan hari ini">🗑 Hapus hari ini</button>
+    </div>
+  </div>
+</main>
+
+<footer>Catatan v1.0 — datamu tidak pernah keluar dari perangkat ini.</footer>
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  "use strict";
+  var LS_KEY = "catatan.v1";
+  var editor = document.getElementById("editor");
+  var tglEl = document.getElementById("tgl");
+  var hariEl = document.getElementById("hari");
+  var statusEl = document.getElementById("status");
+  var kataEl = document.getElementById("kata");
+  var cariEl = document.getElementById("cari");
+  var hasilEl = document.getElementById("hasil");
+  var toastEl = document.getElementById("toast");
+  var fileImpor = document.getElementById("fileimpor");
+
+  var offsetHari = 0; // 0 = hari ini
+  var timerSimpan = null;
+
+  var NAMA_HARI = ["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"];
+  var NAMA_BULAN = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+
+  function muat() {
+    try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; }
+    catch (e) { return {}; }
+  }
+  function simpanSemua(data) {
+    localStorage.setItem(LS_KEY, JSON.stringify(data));
+  }
+  function kunciTanggal(offset) {
+    var d = new Date();
+    d.setDate(d.getDate() + offset);
+    var y = d.getFullYear();
+    var m = ("0" + (d.getMonth() + 1)).slice(-2);
+    var t = ("0" + d.getDate()).slice(-2);
+    return { kunci: y + "-" + m + "-" + t, date: d };
+  }
+  function labelTanggal(d) {
+    return d.getDate() + " " + NAMA_BULAN[d.getMonth()] + " " + d.getFullYear();
+  }
+  function toast(pesan) {
+    toastEl.textContent = pesan;
+    toastEl.classList.add("show");
+    clearTimeout(toastEl._t);
+    toastEl._t = setTimeout(function () { toastEl.classList.remove("show"); }, 1800);
+  }
+  function hitungKata(teks) {
+    var t = teks.trim();
+    return t ? t.split(/\s+/).length : 0;
+  }
+  function render() {
+    var info = kunciTanggal(offsetHari);
+    var data = muat();
+    tglEl.textContent = labelTanggal(info.date);
+    hariEl.textContent = NAMA_HARI[info.date.getDay()] + (offsetHari === 0 ? " · hari ini" : "");
+    editor.value = data[info.kunci] || "";
+    perbaruiMeta();
+  }
+  function perbaruiMeta() {
+    var n = hitungKata(editor.value);
+    kataEl.textContent = n + " kata";
+  }
+  function tandaiTersimpan() {
+    var jam = new Date();
+    var hh = ("0" + jam.getHours()).slice(-2);
+    var mm = ("0" + jam.getMinutes()).slice(-2);
+    statusEl.textContent = "✓ tersimpan " + hh + ":" + mm;
+  }
+  editor.addEventListener("input", function () {
+    perbaruiMeta();
+    statusEl.textContent = "mengetik…";
+    clearTimeout(timerSimpan);
+    timerSimpan = setTimeout(function () {
+      var info = kunciTanggal(offsetHari);
+      var data = muat();
+      var isi = editor.value;
+      if (isi.trim()) { data[info.kunci] = isi; }
+      else { delete data[info.kunci]; }
+      simpanSemua(data);
+      tandaiTersimpan();
+    }, 600);
+  });
+
+  document.getElementById("prev").addEventListener("click", function () { offsetHari--; render(); });
+  document.getElementById("next").addEventListener("click", function () { offsetHari++; render(); });
+  document.getElementById("today").addEventListener("click", function () { offsetHari = 0; render(); });
+
+  function esc(s) {
+    return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+  cariEl.addEventListener("input", function () {
+    var q = cariEl.value.trim().toLowerCase();
+    hasilEl.innerHTML = "";
+    if (q.length < 2) return;
+    var data = muat();
+    var kunci = Object.keys(data).sort().reverse();
+    var cocok = 0;
+    kunci.forEach(function (k) {
+      if (cocok >= 20) return;
+      var isi = data[k];
+      if (isi.toLowerCase().indexOf(q) === -1) return;
+      cocok++;
+      var bagian = k.split("-");
+      var d = new Date(+bagian[0], +bagian[1] - 1, +bagian[2]);
+      var li = document.createElement("li");
+      var idx = isi.toLowerCase().indexOf(q);
+      var cuplik = isi.slice(Math.max(0, idx - 40), idx + 80).replace(/\s+/g, " ");
+      li.innerHTML = "<b>" + esc(labelTanggal(d)) + "</b><span>" + esc(cuplik) + "…</span>";
+      li.addEventListener("click", function () {
+        var beda = Math.round((d - new Date(new Date().setHours(0,0,0,0))) / 86400000);
+        offsetHari = beda;
+        render();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
+      hasilEl.appendChild(li);
+    });
+    if (cocok === 0) {
+      hasilEl.innerHTML = "<li><span>Tidak ada yang cocok.</span></li>";
+    }
+  });
+
+  document.getElementById("ekspor").addEventListener("click", function () {
+    var data = muat();
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "catatan-backup.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast("Backup diunduh ✓");
+  });
+  document.getElementById("impor").addEventListener("click", function () { fileImpor.click(); });
+  fileImpor.addEventListener("change", function () {
+    var f = fileImpor.files[0];
+    if (!f) return;
+    var r = new FileReader();
+    r.onload = function () {
+      try {
+        var data = JSON.parse(r.result);
+        var lama = muat();
+        Object.keys(data).forEach(function (k) {
+          if (/^\d{4}-\d{2}-\d{2}$/.test(k) && typeof data[k] === "string") lama[k] = data[k];
+        });
+        simpanSemua(lama);
+        render();
+        toast("Impor berhasil ✓");
+      } catch (e) { toast("File tidak valid ✗"); }
+      fileImpor.value = "";
+    };
+    r.readAsText(f);
+  });
+  document.getElementById("hapus").addEventListener("click", function () {
+    if (!editor.value.trim()) return;
+    if (!confirm("Hapus catatan hari ini?")) return;
+    var info = kunciTanggal(offsetHari);
+    var data = muat();
+    delete data[info.kunci];
+    simpanSemua(data);
+    render();
+    toast("Dihapus ✓");
+  });
+
+  render();
+  statusEl.textContent = "siap menulis";
+})();
+</script>
+</body>
+</html>
